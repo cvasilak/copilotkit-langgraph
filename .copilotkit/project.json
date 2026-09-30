@@ -1,0 +1,7 @@
+{
+  "projectId": "6680",
+  "projectSlug": "copilotkit-langgraph",
+  "clerkOrgId": "org_3EtzrqKL3UcpADB3q5LsRLsOIjP",
+  "telemetryBindingId": "a96c7483-cb05-4d72-910c-5b31550e05ed",
+  "runtimeUrl": "http://localhost:3000/api/copilotkit"
+}

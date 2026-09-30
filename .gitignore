@@ -52,3 +52,6 @@ next-env.d.ts
 # Tools
 .claude
 .scratch/
+
+# CopilotKit CLI verification output (machine-specific)
+.copilotkit/proof/
