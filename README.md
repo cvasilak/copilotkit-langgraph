@@ -7,7 +7,7 @@ https://github.com/user-attachments/assets/47761912-d46a-4fb3-b9bd-cb41ddd02e34
 ## Prerequisites
 
 - Node.js 18+
-- Python 3.12+
+- Python 3.12+ (the agent pins 3.13 in `agent/.python-version`; uv downloads it automatically if missing)
 - [uv](https://docs.astral.sh/uv/) (Python package manager)
 - Any of the following package managers:
   - npm (default)

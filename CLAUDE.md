@@ -29,7 +29,7 @@ This is a **flat npm project** with a Next.js frontend at the root and a Python 
 │   │   ├── page.tsx              # Main page - wires up all components
 │   │   └── api/copilotkit/       # CopilotKit API route
 │   ├── components/
-│   │   ├── canvas/               # Todo list UI
+│   │   ├── example-canvas/       # Todo list UI
 │   │   │   ├── index.tsx         # Canvas container
 │   │   │   ├── todo-list.tsx     # Todo list with columns
 │   │   │   ├── todo-column.tsx   # Column (pending/completed)
@@ -87,7 +87,7 @@ The todo list uses **CopilotKit v2's agent state pattern** where state lives in 
 2. **Frontend reads from agent state**
 
    ```typescript
-   // src/components/canvas/index.tsx
+   // src/components/example-canvas/index.tsx
    const { agent } = useAgent();
 
    return (
@@ -180,7 +180,7 @@ def get_todos(runtime: ToolRuntime):
 
 ### Frontend
 
-**Canvas Component** (`src/components/canvas/index.tsx`):
+**Canvas Component** (`src/components/example-canvas/index.tsx`):
 
 ```typescript
 export function Canvas() {
@@ -201,7 +201,7 @@ export function Canvas() {
 }
 ```
 
-**Todo List** (`src/components/canvas/todo-list.tsx`):
+**Todo List** (`src/components/example-canvas/todo-list.tsx`):
 
 ```typescript
 export function TodoList({ todos, onUpdate, isAgentRunning }: TodoListProps) {
