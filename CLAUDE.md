@@ -61,6 +61,8 @@ The todo list uses **CopilotKit v2's agent state pattern** where state lives in 
 
    ```python
    # agent/src/todos.py
+   from langchain.agents import AgentState as BaseAgentState
+
    class Todo(TypedDict):
        id: str
        title: str
@@ -68,14 +70,19 @@ The todo list uses **CopilotKit v2's agent state pattern** where state lives in 
        emoji: str
        status: Literal["pending", "completed"]
 
-   class AgentState(TypedDict):
-       todos: list[Todo]
+   # Extends LangChain's AgentState, which provides `messages` (add_messages reducer)
+   class AgentState(BaseAgentState):
+       todos: list[Todo]  # no reducer: each update replaces the whole list
 
    @tool
    def manage_todos(todos: list[Todo], runtime: ToolRuntime) -> Command:
        """Manage the current todos."""
        return Command(update={"todos": todos, ...})
    ```
+
+   - `AgentState` must subclass LangChain's `AgentState` (not plain `TypedDict`) — `create_agent` needs the inherited `messages` key.
+   - `todos` has no reducer, so writes are last-write-wins: tools and `agent.setState()` must always send the **full** list.
+   - Tools read state via `runtime.state` and write via `Command(update=...)`; a state-updating tool must also return a `ToolMessage` with the matching `tool_call_id`.
 
 2. **Frontend reads from agent state**
 
@@ -126,17 +133,27 @@ The todo list uses **CopilotKit v2's agent state pattern** where state lives in 
 
 ```python
 from langchain.agents import create_agent
-from copilotkit import CopilotKitMiddleware
+from copilotkit import CopilotKitMiddleware, StateStreamingMiddleware, StateItem
+from langchain_openai import ChatOpenAI
 from src.todos import todo_tools, AgentState
 
+model = ChatOpenAI(model="gpt-5.4-mini", model_kwargs={"parallel_tool_calls": False})
+
 agent = create_agent(
-    model="gpt-5.2",
+    model=model,
     tools=[*todo_tools, ...],  # manage_todos, get_todos
-    middleware=[CopilotKitMiddleware()],
+    middleware=[
+        CopilotKitMiddleware(),  # syncs graph state <-> frontend agent.state
+        StateStreamingMiddleware(  # streams manage_todos args into state.todos live
+            StateItem(state_key="todos", tool="manage_todos", tool_argument="todos")
+        ),
+    ],
     state_schema=AgentState,  # Defines state shape
     system_prompt="You are a helpful assistant..."
 )
 ```
+
+`StateStreamingMiddleware` makes todos appear in the UI while the model is still generating the `manage_todos` call, instead of only after the tool completes. Add a `StateItem` for any new state key that a tool writes wholesale from one of its arguments.
 
 **Todo Tools** (`agent/src/todos.py`):
 
@@ -225,7 +242,7 @@ export function TodoList({ todos, onUpdate, isAgentRunning }: TodoListProps) {
 ## Tech Stack
 
 - **Frontend**: Next.js 16, React 19, TailwindCSS 4
-- **Agent**: LangGraph (Python), OpenAI GPT-5.2
+- **Agent**: LangGraph (Python), OpenAI GPT-5.4 mini (via `langchain_openai`)
 - **CopilotKit**: React hooks for agent integration (v2)
 - **Build**: npm with concurrently for parallel dev processes
 - **Other**: Recharts for generative UI examples
@@ -268,7 +285,7 @@ cp .env.example .env
 
 **State Management Pattern**: This app uses CopilotKit v2's agent state pattern where:
 
-- State is defined in the agent backend (Python TypedDict)
+- State is defined in the agent backend (a subclass of LangChain's `AgentState`)
 - Frontend reads via `agent.state.todos`
 - Frontend writes via `agent.setState({ todos: ... })`
 - Agent can modify state via tools (`manage_todos`)
@@ -276,8 +293,10 @@ cp .env.example .env
 
 **When extending this template**:
 
-- Define state schema in the agent (`AgentState`)
+- Define state schema in the agent (`AgentState`, subclassing LangChain's `AgentState`)
 - Create tools that manipulate state via `Command(update={...})`
+- Use `Annotated[..., reducer]` on a state key if agent and user writes should merge rather than replace
+- Register a `StateItem` in `StateStreamingMiddleware` to stream a tool-written key to the UI live
 - Use `useAgent()` hook in frontend to read/write state
 - Let CopilotKit handle the sync - no manual state management needed
 
